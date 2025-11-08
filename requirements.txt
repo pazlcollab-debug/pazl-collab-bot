@@ -1,0 +1,6 @@
+aiogram==3.4.1
+pyairtable==2.2.0
+python-dotenv==1.0.0
+aiohttp==3.9.5
+fastapi==0.104.1  # Для webhook на Railway
+uvicorn==0.24.0   # ASGI-сервер
