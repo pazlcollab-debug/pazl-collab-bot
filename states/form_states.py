@@ -1,18 +1,55 @@
 from aiogram.fsm.state import State, StatesGroup
 
 class FormStates(StatesGroup):
-    waiting_for_name = State()  # ФИО
-    waiting_for_phone = State()  # Телефон / WhatsApp
-    waiting_for_telegram = State()  # Telegram
-    waiting_for_city = State()  # Город
-    waiting_for_social = State()  # Instagram / соцсети
-    waiting_for_expertise = State()  # Основное направление
-    waiting_for_education = State()  # Базовое образование
-    waiting_for_experience = State()  # Стаж работы
-    waiting_for_format = State()  # Форматы работы
-    waiting_for_clients = State()  # Количество клиентов
-    waiting_for_price = State()  # Средний чек
-    waiting_for_requests = State()  # Основные запросы
-    waiting_for_audience = State()  # Пол/возраст/статус/доход/география
-    waiting_for_positioning = State()  # Уникальность (1–3 предложения)
-    waiting_for_photo = State()  # Фото (Шаг 3 ТЗ)
+    # Блок 1: Личные данные
+    waiting_for_name = State()
+    waiting_for_phone = State()
+    waiting_for_telegram = State()
+    waiting_for_city = State()
+    waiting_for_social = State()
+    
+    # Блок 2: Профессиональная экспертиза
+    waiting_for_expertise = State()
+    waiting_for_main_direction = State()
+    waiting_for_main_direction_other = State()     # <-- Добавить!
+    waiting_for_additional_methods = State()
+    waiting_for_additional_methods_other = State() # <-- Добавить!
+    waiting_for_education = State()
+    waiting_for_education_other = State()          # <-- Добавить если используется!
+    waiting_for_experience = State()
+
+    # Блок 3: Формат и объем практики
+    waiting_for_format = State()
+    waiting_for_clients = State()
+    waiting_for_price = State()
+    waiting_for_requests = State()
+    waiting_for_requests_other = State()           # <-- Добавить если используется!
+    
+    # Блок 4: Целевая аудитория
+    waiting_for_audience = State()
+    waiting_for_gender = State()
+    waiting_for_age = State()
+    waiting_for_status = State()
+    waiting_for_income = State()
+    waiting_for_geography = State()
+    waiting_for_positioning = State()
+    
+    # Блок 5: Бизнес-модель
+    waiting_for_products = State()
+    waiting_for_client_sources = State()
+    waiting_for_audience_size = State()
+    waiting_for_audience_activity = State()
+    
+    # Блок 6: Опыт коллабораций
+    waiting_for_collab_formats = State()
+    waiting_for_collab_partners = State()
+    waiting_for_collab_offer = State()
+    
+    # Блок 7: Мотивация
+    waiting_for_motivation = State()
+    waiting_for_result = State()
+    waiting_for_investment = State()
+    waiting_for_agreement = State()
+    
+    # Фото
+    waiting_for_photo = State()
