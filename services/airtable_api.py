@@ -1,6 +1,12 @@
-from pyairtable import Table
-from config import AIRTABLE_API_KEY, AIRTABLE_BASE_ID
+import asyncio
 import requests
+import csv
+import os
+from datetime import datetime
+from pyairtable import Table
+from aiogram import Bot
+from config import AIRTABLE_API_KEY, AIRTABLE_BASE_ID, BOT_TOKEN
+from services.status_notifier import notify_new_expert  # 📢 уведомление в канал
 
 # ==========================
 # 🎓 Education
@@ -65,21 +71,22 @@ CLIENTS_COUNT_MAPPING_EN = {
 }
 
 # ==========================
-# 💰 Average check
+# 💰 Average check (исправленный, синхронизирован с form_keyboards.py)
 # ==========================
 AVERAGE_CHECK_MAPPING_RU = {
     "under_10k": "до 10 тыс рублей",
-    "10_30k": "10-30 тыс",
-    "30_50k": "30-50 тыс",
-    "50_100k": "50-100 тыс",
-    "over_100k": "от 100 тыс"
+    "10_30k": "10–30 тыс рублей",
+    "30_50k": "30–50 тыс рублей",
+    "50_100k": "50–100 тыс рублей",
+    "over_100k": "от 100 тыс рублей"
 }
+
 AVERAGE_CHECK_MAPPING_EN = {
-    "under_10k": "up to 10k rubles",
-    "10_30k": "10-30k rubles",
-    "30_50k": "30-50k rubles",
-    "50_100k": "50-100k rubles",
-    "over_100k": "over 100k rubles"
+    "under_10k": "up to $100",
+    "10_30k": "$100–300",
+    "30_50k": "$300–500",
+    "50_100k": "$500–1 000",
+    "over_100k": "over $1 000"
 }
 
 # ==========================
@@ -147,6 +154,8 @@ DIRECTION_MAPPING_EN = {
     "yoga_therapy": "Yoga therapy",
     "other": "Other"
 }
+VALID_DIRECTIONS_RU = set(DIRECTION_MAPPING_RU.values())
+VALID_DIRECTIONS_EN = set(DIRECTION_MAPPING_EN.values())
 
 # ==========================
 # 🎭 Methods
@@ -155,7 +164,7 @@ METHODS_MAPPING_RU = {
     "nlp": "НЛП",
     "constellations": "Системные расстановки",
     "art_therapy": "Арт-терапия",
-    "mac": "МАК",
+    "mac": "МАК (метафорические ассоциативные карты)",
     "meditation": "Медитативные практики",
     "breathing": "Дыхательные практики",
     "ancestral_work": "Работа с родовыми сценариями",
@@ -173,6 +182,8 @@ METHODS_MAPPING_EN = {
     "human_design": "Human Design",
     "other": "Other"
 }
+VALID_METHODS_RU = set(METHODS_MAPPING_RU.values())
+VALID_METHODS_EN = set(METHODS_MAPPING_EN.values())
 
 # ==========================
 # 💬 Requests
@@ -196,14 +207,10 @@ REQUESTS_MAPPING_RU = {
     "men_topics": "Мужские темы",
     "psychosomatics": "Психосоматика",
     "trauma": "Работа с травмой (ПТСР)",
-    # 🩵 FIX — два варианта безопасно
-    "inner_parts": "Работа с внутренними частями",
-    "internal_parts": "Работа с внутренними частями",
+    "inner_parts": "Работа с внутренними частями личности",
     "spiritual": "Духовное развитие",
-    "spiritual_development": "Духовное развитие",
     "other": "Другое"
 }
-
 REQUESTS_MAPPING_EN = {
     "anxiety": "Anxiety, panic attacks, fears",
     "depression": "Depression, apathy, loss of meaning",
@@ -223,133 +230,173 @@ REQUESTS_MAPPING_EN = {
     "men_topics": "Men's topics",
     "psychosomatics": "Psychosomatics",
     "trauma": "Trauma work (PTSD)",
-    # 🩵 FIX — два ключа на один вариант
     "inner_parts": "Working with inner parts of personality",
-    "internal_parts": "Working with inner parts of personality",
     "spiritual": "Spiritual development, self-search",
-    "spiritual_development": "Spiritual development, self-search",
     "other": "Other"
 }
 
 # ==========================
-# ⚙️ Подключение к Airtable
+# ⚙️ Airtable setup
 # ==========================
+_cached_fields = None
+_sent_notifications = set()
+
 def get_table(table_name='Experts'):
     return Table(AIRTABLE_API_KEY, AIRTABLE_BASE_ID, table_name)
 
-
 def get_all_table_fields():
+    global _cached_fields
+    if _cached_fields:
+        return _cached_fields
     url = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
     headers = {"Authorization": f"Bearer {AIRTABLE_API_KEY}"}
     try:
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            data = response.json()
-            for table in data.get('tables', []):
-                if table['name'] == 'Experts':
-                    return [field['name'] for field in table.get('fields', [])]
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            for t in data.get("tables", []):
+                if t["name"] == "Experts":
+                    _cached_fields = [f["name"] for f in t["fields"]]
+                    return _cached_fields
     except Exception as e:
-        print(f"Ошибка: {e}")
+        print(f"⚠️ Ошибка при получении полей Airtable: {e}")
     return []
 
 # ==========================
-# 🧭 Универсальное сопоставление значений
+# 🧭 Universal mapping
 # ==========================
 def smart_map(values, mapping_ru, mapping_en, lang):
     mapping = mapping_ru if lang == "ru" else mapping_en
-    print(f"🌐 SMART_MAP → язык: {lang}")
-
     if isinstance(values, list):
-        mapped = [mapping.get(val, val) for val in values if val]
-        print(f"➡️ Список сопоставлен: {mapped}")
-        return mapped
-
-    mapped_value = mapping.get(values, values)
-    print(f"➡️ Одно значение: {mapped_value}")
-    return mapped_value
+        return [mapping.get(v, v) for v in values if v]
+    return mapping.get(values, values)
 
 # ==========================
-# 📤 Создание записи в Airtable
+# 🗂️ CSV Logging
+# ==========================
+def log_record_to_csv(record_id, name, lang, telegram_id):
+    os.makedirs("logs", exist_ok=True)
+    csv_path = "logs/airtable_records.csv"
+    file_exists = os.path.exists(csv_path)
+    with open(csv_path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["datetime", "record_id", "name", "lang", "telegram_id"])
+        writer.writerow([
+            datetime.now().isoformat(timespec="seconds"),
+            record_id,
+            name,
+            lang,
+            telegram_id
+        ])
+
+# ==========================
+# 📤 Create record in Airtable
 # ==========================
 async def create_expert_record(data: dict):
     table = get_table()
-    available_fields = get_all_table_fields()
-    lang = data.get('lang', 'ru')
+    available = get_all_table_fields()
+    lang = data.get("lang", "ru")
 
     airtable_data = {
-        'Name': data.get('name', ''),
-        'Phone': data.get('phone', ''),
-        'Telegram': data.get('telegram', ''),
-        'City': data.get('city', ''),
-        'Language': lang,
+        "Name": data.get("name", ""),
+        "Phone": data.get("phone", ""),
+        "Telegram": data.get("telegram", ""),
+        "City": data.get("city", ""),
+        "Language": lang,
     }
 
-    if 'Social' in available_fields:
-        airtable_data['Social'] = data.get('social', '')
+    if "Social" in available:
+        airtable_data["Social"] = data.get("social", "")
 
-    if 'Education' in available_fields:
-        airtable_data['Education'] = smart_map(data.get('education', ''), EDUCATION_MAPPING_RU, EDUCATION_MAPPING_EN, lang)
+    if "Education" in available:
+        airtable_data["Education"] = smart_map(data.get("education", ""), EDUCATION_MAPPING_RU, EDUCATION_MAPPING_EN, lang)
 
-    if 'Experience' in available_fields:
-        airtable_data['Experience'] = smart_map(data.get('experience', ''), EXPERIENCE_MAPPING_RU, EXPERIENCE_MAPPING_EN, lang)
+    if "Experience" in available:
+        airtable_data["Experience"] = smart_map(data.get("experience", ""), EXPERIENCE_MAPPING_RU, EXPERIENCE_MAPPING_EN, lang)
 
-    if 'Clients' in available_fields:
-        airtable_data['Clients'] = smart_map(data.get('clients_count', ''), CLIENTS_COUNT_MAPPING_RU, CLIENTS_COUNT_MAPPING_EN, lang)
+    if "Clients" in available:
+        airtable_data["Clients"] = smart_map(data.get("clients_count", ""), CLIENTS_COUNT_MAPPING_RU, CLIENTS_COUNT_MAPPING_EN, lang)
 
-    if 'AverageCheck' in available_fields:
-        airtable_data['AverageCheck'] = smart_map(data.get('average_check', ''), AVERAGE_CHECK_MAPPING_RU, AVERAGE_CHECK_MAPPING_EN, lang)
+    if "AverageCheck" in available:
+        airtable_data["AverageCheck"] = smart_map(data.get("average_check", ""), AVERAGE_CHECK_MAPPING_RU, AVERAGE_CHECK_MAPPING_EN, lang)
 
-    if 'Audience' in available_fields:
-        airtable_data['Audience'] = data.get('audience', '')
+    if "Audience" in available:
+        airtable_data["Audience"] = data.get("audience", "")
 
-    if 'Positioning' in available_fields:
-        airtable_data['Positioning'] = data.get('positioning', '')
+    if "Positioning" in available:
+        airtable_data["Positioning"] = data.get("positioning", "")
 
-    if 'TelegramID' in available_fields:
-        airtable_data['TelegramID'] = str(data.get('telegram_id', ''))
+    if "TelegramID" in available:
+        airtable_data["TelegramID"] = str(data.get("telegram_id", ""))
 
-    if 'Direction' in available_fields:
-        airtable_data['Direction'] = smart_map(data.get('main_direction', []), DIRECTION_MAPPING_RU, DIRECTION_MAPPING_EN, lang)
+    if "Direction" in available:
+        dirs = smart_map(data.get("main_direction", []), DIRECTION_MAPPING_RU, DIRECTION_MAPPING_EN, lang)
+        valid = VALID_DIRECTIONS_RU if lang == "ru" else VALID_DIRECTIONS_EN
+        airtable_data["Direction"] = [d for d in dirs if d in valid]
 
-    if 'Methods' in available_fields:
-        airtable_data['Methods'] = smart_map(data.get('additional_methods', []), METHODS_MAPPING_RU, METHODS_MAPPING_EN, lang)
+    if "Methods" in available:
+        m = smart_map(data.get("additional_methods", []), METHODS_MAPPING_RU, METHODS_MAPPING_EN, lang)
+        valid = VALID_METHODS_RU if lang == "ru" else VALID_METHODS_EN
+        airtable_data["Methods"] = [x for x in m if x in valid]
 
-    if 'Format' in available_fields:
-        airtable_data['Format'] = smart_map(data.get('work_formats', []), WORK_FORMAT_MAPPING_RU, WORK_FORMAT_MAPPING_EN, lang)
+    if "Format" in available:
+        airtable_data["Format"] = smart_map(data.get("work_formats", []), WORK_FORMAT_MAPPING_RU, WORK_FORMAT_MAPPING_EN, lang)
 
-    if 'Requests' in available_fields:
-        raw_requests = data.get('client_requests', [])
-        if isinstance(raw_requests, str):
-            raw_requests = [raw_requests] if raw_requests else []
-        mapped = smart_map(raw_requests, REQUESTS_MAPPING_RU, REQUESTS_MAPPING_EN, lang)
-
-        # 🛡️ Фильтрация неизвестных ключей
+    if "Requests" in available:
+        reqs = data.get("client_requests", [])
+        if isinstance(reqs, str):
+            reqs = [reqs] if reqs else []
+        mapped = smart_map(reqs, REQUESTS_MAPPING_RU, REQUESTS_MAPPING_EN, lang)
         known = set(REQUESTS_MAPPING_RU.values()) | set(REQUESTS_MAPPING_EN.values())
-        filtered = [r for r in mapped if r in known]
-        airtable_data['Requests'] = filtered
+        airtable_data["Requests"] = [r for r in mapped if r in known]
 
-    if 'Photo' in available_fields and data.get('photo_url'):
-        airtable_data['Photo'] = [{'url': data['photo_url']}]
+    if "Photo" in available and data.get("photo_url"):
+        airtable_data["Photo"] = [{"url": data["photo_url"]}]
 
-    print(f"\n📤 SENDING TO AIRTABLE ({lang}):\n{airtable_data}\n")
+    if "Status" in available:
+        airtable_data["Status"] = "🟡 На модерации" if lang == "ru" else "🟡 Pending"
+
+    airtable_data = {k: v for k, v in airtable_data.items() if v not in ("", None, [], [{}])}
 
     try:
         record = table.create(airtable_data)
-        print(f"✅ Запись создана в Airtable с ID: {record['id']}")
-        return record['id']
+        record_id = record["id"]
+        print(f"✅ Новая запись создана в Airtable ({lang}): {record_id}")
+
+        log_record_to_csv(
+            record_id,
+            data.get("name", "Без имени"),
+            lang,
+            data.get("telegram_id", "")
+        )
+
+        async def notify():
+            if record_id in _sent_notifications:
+                return
+            _sent_notifications.add(record_id)
+            await asyncio.sleep(1.5)
+            bot = Bot(token=BOT_TOKEN)
+            try:
+                await notify_new_expert(bot=bot, expert_name=data.get("name", "Без имени"), lang=lang, record_id=record_id)
+            finally:
+                await bot.session.close()
+
+        asyncio.create_task(notify())
+        return record_id
+
     except Exception as e:
-        print(f"❌ Ошибка создания записи: {e}")
+        print(f"❌ Ошибка при создании записи: {e}")
         raise
 
 # ==========================
-# 🔄 Обновление статуса
+# 🔄 Update status
 # ==========================
 async def update_expert_status(expert_id: str, status: str):
     table = get_table()
-    print(f"🔄 Обновляем статус {expert_id} → {status}")
     try:
-        table.update(expert_id, {'Status': status})
-        print("✅ Статус успешно обновлён")
+        table.update(expert_id, {"Status": status})
+        print(f"✅ Статус обновлён: {status}")
         return True
     except Exception as e:
         print(f"❌ Ошибка при обновлении статуса: {e}")

@@ -1,5 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+
 def create_multiselect_keyboard(options: list, callback_prefix: str, selected: list = None, show_done: bool = True):
     if selected is None:
         selected = []
@@ -12,7 +13,10 @@ def create_multiselect_keyboard(options: list, callback_prefix: str, selected: l
         keyboard.append([InlineKeyboardButton(text="✅ Готово", callback_data=f"{callback_prefix}:done")])
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-# Основное направление, RU/EN
+
+# ==========================
+# 🔹 Основное направление (Main Direction)
+# ==========================
 MAIN_DIRECTION_OPTIONS_RU = [
     ("Коучинг (лайф-коучинг)", "coaching_life"),
     ("Коучинг (бизнес-коучинг)", "coaching_business"),
@@ -52,6 +56,10 @@ MAIN_DIRECTION_OPTIONS_EN = [
     ("Other", "other"),
 ]
 
+
+# ==========================
+# 🔹 Дополнительные методы
+# ==========================
 ADDITIONAL_METHODS_OPTIONS_RU = [
     ("НЛП", "nlp"),
     ("Системные расстановки", "constellations"),
@@ -75,6 +83,10 @@ ADDITIONAL_METHODS_OPTIONS_EN = [
     ("Other", "other"),
 ]
 
+
+# ==========================
+# 🔹 Образование
+# ==========================
 EDUCATION_OPTIONS_RU = [
     ("Высшее психологическое", "psych_higher"),
     ("Высшее медицинское", "medical_higher"),
@@ -92,6 +104,10 @@ EDUCATION_OPTIONS_EN = [
     ("No specialized education", "none"),
 ]
 
+
+# ==========================
+# 🔹 Опыт
+# ==========================
 EXPERIENCE_OPTIONS_RU = [
     ("Менее 1 года", "less_1"),
     ("1-2 года", "1_2"),
@@ -111,6 +127,10 @@ EXPERIENCE_OPTIONS_EN = [
     ("More than 10 years", "more_10"),
 ]
 
+
+# ==========================
+# 🔹 Форматы работы
+# ==========================
 WORK_FORMAT_OPTIONS_RU = [
     ("Индивидуальные сессии (онлайн)", "individual_online"),
     ("Индивидуальные сессии (офлайн)", "individual_offline"),
@@ -132,6 +152,10 @@ WORK_FORMAT_OPTIONS_EN = [
     ("Webinars/master classes", "webinars"),
 ]
 
+
+# ==========================
+# 🔹 Количество клиентов
+# ==========================
 CLIENTS_COUNT_OPTIONS_RU = [
     ("1-5 клиентов", "1_5"),
     ("5-10 клиентов", "5_10"),
@@ -149,21 +173,29 @@ CLIENTS_COUNT_OPTIONS_EN = [
     ("More than 30 clients", "more_30"),
 ]
 
+
+# ==========================
+# 💰 Средний чек (исправленный)
+# ==========================
 AVERAGE_CHECK_OPTIONS_RU = [
     ("до 10 тыс рублей", "under_10k"),
-    ("10-30 тыс", "10_30k"),
-    ("30-50 тыс", "30_50k"),
-    ("50-100 тыс", "50_100k"),
-    ("от 100 тыс", "over_100k"),
+    ("10–30 тыс рублей", "10_30k"),
+    ("30–50 тыс рублей", "30_50k"),
+    ("50–100 тыс рублей", "50_100k"),
+    ("от 100 тыс рублей", "over_100k"),
 ]
 AVERAGE_CHECK_OPTIONS_EN = [
-    ("up to 10k rubles", "under_10k"),
-    ("10-30k rubles", "10_30k"),
-    ("30-50k rubles", "30_50k"),
-    ("50-100k rubles", "50_100k"),
-    ("over 100k rubles", "over_100k"),
+    ("up to $100", "under_10k"),
+    ("$100–300", "10_30k"),
+    ("$300–500", "30_50k"),
+    ("$500–1 000", "50_100k"),
+    ("over $1 000", "over_100k"),
 ]
 
+
+# ==========================
+# 🔹 Клиентские запросы
+# ==========================
 CLIENT_REQUESTS_OPTIONS_RU = [
     ("Тревожность, панические атаки, страхи", "anxiety"),
     ("Депрессия, апатия, потеря смысла", "depression"),
@@ -211,33 +243,44 @@ CLIENT_REQUESTS_OPTIONS_EN = [
     ("Other", "other"),
 ]
 
+
+# ==========================
+# 🔸 Генераторы клавиатур
+# ==========================
 def get_main_direction_keyboard(lang, selected=None):
     return create_multiselect_keyboard(
         MAIN_DIRECTION_OPTIONS_EN if lang == 'en' else MAIN_DIRECTION_OPTIONS_RU, "main_direction", selected or [])
+
 
 def get_methods_keyboard(lang, selected=None):
     return create_multiselect_keyboard(
         ADDITIONAL_METHODS_OPTIONS_EN if lang == 'en' else ADDITIONAL_METHODS_OPTIONS_RU, "additional_methods", selected or [])
 
+
 def get_education_keyboard(lang, selected=None):
     return create_multiselect_keyboard(
         EDUCATION_OPTIONS_EN if lang == 'en' else EDUCATION_OPTIONS_RU, "education", selected or [], show_done=False)
+
 
 def get_experience_keyboard(lang, selected=None):
     return create_multiselect_keyboard(
         EXPERIENCE_OPTIONS_EN if lang == 'en' else EXPERIENCE_OPTIONS_RU, "experience", selected or [], show_done=False)
 
+
 def get_work_format_keyboard(lang, selected=None):
     return create_multiselect_keyboard(
         WORK_FORMAT_OPTIONS_EN if lang == 'en' else WORK_FORMAT_OPTIONS_RU, "work_format", selected or [])
+
 
 def get_clients_count_keyboard(lang, selected=None):
     return create_multiselect_keyboard(
         CLIENTS_COUNT_OPTIONS_EN if lang == 'en' else CLIENTS_COUNT_OPTIONS_RU, "clients_count", selected or [], show_done=False)
 
+
 def get_average_check_keyboard(lang, selected=None):
     return create_multiselect_keyboard(
         AVERAGE_CHECK_OPTIONS_EN if lang == 'en' else AVERAGE_CHECK_OPTIONS_RU, "avg_check", selected or [], show_done=False)
+
 
 def get_client_requests_keyboard(lang, selected=None):
     return create_multiselect_keyboard(

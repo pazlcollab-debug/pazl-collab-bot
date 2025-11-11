@@ -24,12 +24,12 @@ def get_main_menu(lang: str = 'ru') -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=buttons,
         resize_keyboard=True,
-        one_time_keyboard=False
+        input_field_placeholder="Выберите действие..." if lang == 'ru' else "Choose an action..."
     )
 
 
 # ============================================================
-# 📊  Меню — ПОСЛЕ отправки анкеты (в ожидании проверки)
+# 📊  Меню — ПОСЛЕ отправки анкеты (🟡 Pending)
 # ============================================================
 
 def get_status_menu(lang: str = 'ru') -> ReplyKeyboardMarkup:
@@ -47,12 +47,12 @@ def get_status_menu(lang: str = 'ru') -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=buttons,
         resize_keyboard=True,
-        one_time_keyboard=False
+        input_field_placeholder="Анкета на модерации..." if lang == 'ru' else "Form under review..."
     )
 
 
 # ============================================================
-# ✅  Меню — ПОСЛЕ одобрения анкеты (Approved)
+# ✅  Меню — ПОСЛЕ одобрения анкеты (🟢 Approved)
 # ============================================================
 
 def get_post_approval_menu(lang: str = 'ru') -> ReplyKeyboardMarkup:
@@ -74,7 +74,7 @@ def get_post_approval_menu(lang: str = 'ru') -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=buttons,
         resize_keyboard=True,
-        one_time_keyboard=False
+        input_field_placeholder="Выберите действие..." if lang == 'ru' else "Choose an action..."
     )
 
 

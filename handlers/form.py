@@ -20,6 +20,9 @@ from keyboards.form_keyboards import (
 
 router = Router()
 
+# --- Кэш отправленных анкет (чтобы не дублировались)
+sent_records_cache = set()
+
 
 # ==========================
 # ⚙️ Вспомогательные клавиатуры
@@ -203,249 +206,8 @@ async def process_city(message: Message, state: FSMContext):
 
 
 # ==========================
-# 🧩 Блок 2: Профессиональная экспертиза
-# ==========================
-@router.message(FormStates.waiting_for_social)
-async def process_social(message: Message, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    social = validate_text_input(message.text)
-    if social:
-        await state.update_data(social=social)
-        text = (
-            "📚 БЛОК 2: ПРОФЕССИОНАЛЬНАЯ ЭКСПЕРТИЗА\n\nВыберите основное направление деятельности (можно несколько):"
-            if lang == 'ru' else
-            "📚 BLOCK 2: PROFESSIONAL EXPERTISE\n\nSelect main direction (multiple choice):"
-        )
-        keyboard = get_main_direction_keyboard(lang, [])
-        await message.answer(text, reply_markup=keyboard)
-        await state.set_state(FormStates.waiting_for_main_direction)
-    else:
-        await message.answer("Введите Instagram или соцсети." if lang == 'ru' else "Enter Instagram or social media.")
-
-
-@router.callback_query(FormStates.waiting_for_main_direction, F.data.startswith("main_direction:"))
-async def process_main_direction_callback(callback: CallbackQuery, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    value = callback.data.split(":")[1]
-    data = await state.get_data()
-    selected = data.get('main_direction', [])
-
-    if value == "done":
-        if not selected:
-            await callback.answer("Выберите хотя бы один вариант!" if lang == 'ru' else "Select at least one option!", show_alert=True)
-            return
-        if "other" in selected:
-            await callback.message.edit_text("Укажите другое направление:" if lang == 'ru' else "Specify other direction:")
-            await state.set_state(FormStates.waiting_for_main_direction_other)
-        else:
-            text = "Дополнительные методы и инструменты в работе (можно несколько):" if lang == 'ru' else "Additional methods and tools (multiple choice):"
-            keyboard = get_methods_keyboard(lang, [])
-            await callback.message.edit_text(text, reply_markup=keyboard)
-            await state.set_state(FormStates.waiting_for_additional_methods)
-    else:
-        if value in selected:
-            selected.remove(value)
-        else:
-            selected.append(value)
-        await state.update_data(main_direction=selected)
-        keyboard = get_main_direction_keyboard(lang, selected)
-        await callback.message.edit_reply_markup(reply_markup=keyboard)
-    await callback.answer()
-
-
-@router.message(FormStates.waiting_for_main_direction_other)
-async def process_main_direction_other(message: Message, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    text_value = validate_text_input(message.text)
-    data = await state.get_data()
-    selected = data.get("main_direction", [])
-    if text_value:
-        selected.append(text_value)
-    await state.update_data(main_direction=selected)
-    text = "Дополнительные методы и инструменты в работе (можно несколько):" if lang == 'ru' else "Additional methods and tools (multiple choice):"
-    keyboard = get_methods_keyboard(lang, [])
-    await message.answer(text, reply_markup=keyboard)
-    await state.set_state(FormStates.waiting_for_additional_methods)
-
-
-@router.callback_query(FormStates.waiting_for_additional_methods, F.data.startswith("additional_methods:"))
-async def process_additional_methods_callback(callback: CallbackQuery, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    value = callback.data.split(":")[1]
-    data = await state.get_data()
-    selected = data.get('additional_methods', [])
-
-    if value == "done":
-        text = "Базовое образование:" if lang == 'ru' else "Basic education:"
-        keyboard = get_education_keyboard(lang)
-        await callback.message.edit_text(text, reply_markup=keyboard)
-        await state.set_state(FormStates.waiting_for_education)
-    else:
-        if value in selected:
-            selected.remove(value)
-        else:
-            selected.append(value)
-        await state.update_data(additional_methods=selected)
-        keyboard = get_methods_keyboard(lang, selected)
-        await callback.message.edit_reply_markup(reply_markup=keyboard)
-    await callback.answer()
-
-
-# ==========================
-# 🎓 Блок 3: Формат и практика
-# ==========================
-@router.callback_query(FormStates.waiting_for_education, F.data.startswith("education:"))
-async def process_education_callback(callback: CallbackQuery, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    value = callback.data.split(":")[1]
-    await state.update_data(education=value)
-    text = "Стаж работы в профессии:" if lang == 'ru' else "Work experience:"
-    keyboard = get_experience_keyboard(lang)
-    await callback.message.edit_text(text, reply_markup=keyboard)
-    await state.set_state(FormStates.waiting_for_experience)
-    await callback.answer()
-
-
-@router.callback_query(FormStates.waiting_for_experience, F.data.startswith("experience:"))
-async def process_experience_callback(callback: CallbackQuery, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    value = callback.data.split(":")[1]
-    await state.update_data(experience=value)
-    text = "💼 БЛОК 3: ФОРМАТ И ОБЪЕМ ПРАКТИКИ\n\nФормат работы (можно несколько):" if lang == 'ru' else "💼 BLOCK 3: WORK FORMAT\n\nWork format (multiple choice):"
-    keyboard = get_work_format_keyboard(lang, [])
-    await callback.message.edit_text(text, reply_markup=keyboard)
-    await state.set_state(FormStates.waiting_for_format)
-    await callback.answer()
-
-
-@router.callback_query(FormStates.waiting_for_format, F.data.startswith("work_format:"))
-async def process_work_format_callback(callback: CallbackQuery, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    value = callback.data.split(":")[1]
-    data = await state.get_data()
-    selected = data.get('work_formats', [])
-
-    if value == "done":
-        if not selected:
-            await callback.answer("Выберите хотя бы один вариант!" if lang == 'ru' else "Select at least one option!", show_alert=True)
-            return
-        text = "Среднее количество клиентов в месяц:" if lang == 'ru' else "Average number of clients per month:"
-        keyboard = get_clients_count_keyboard(lang)
-        await callback.message.edit_text(text, reply_markup=keyboard)
-        await state.set_state(FormStates.waiting_for_clients)
-    else:
-        if value in selected:
-            selected.remove(value)
-        else:
-            selected.append(value)
-        await state.update_data(work_formats=selected)
-        keyboard = get_work_format_keyboard(lang, selected)
-        await callback.message.edit_reply_markup(reply_markup=keyboard)
-    await callback.answer()
-
-
-@router.callback_query(FormStates.waiting_for_clients, F.data.startswith("clients_count:"))
-async def process_clients_count_callback(callback: CallbackQuery, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    value = callback.data.split(":")[1]
-    await state.update_data(clients_count=value)
-    text = "Ваш средний чек:" if lang == 'ru' else "Your average check:"
-    keyboard = get_average_check_keyboard(lang)
-    await callback.message.edit_text(text, reply_markup=keyboard)
-    await state.set_state(FormStates.waiting_for_price)
-    await callback.answer()
-
-
-@router.callback_query(FormStates.waiting_for_price, F.data.startswith("avg_check:"))
-async def process_average_check_callback(callback: CallbackQuery, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    value = callback.data.split(":")[1]
-    await state.update_data(average_check=value)
-    text = "Какие задачи/запросы вы решаете для клиентов? (до 7 вариантов):" if lang == 'ru' else "What tasks/requests do you solve for clients? (up to 7):"
-    keyboard = get_client_requests_keyboard(lang)
-    await callback.message.edit_text(text, reply_markup=keyboard)
-    await state.set_state(FormStates.waiting_for_requests)
-    await callback.answer()
-
-
-# ==========================
-# 🎯 Блок 4: Целевая аудитория
-# ==========================
-@router.callback_query(FormStates.waiting_for_requests, F.data.startswith("client_requests:"))
-async def process_client_requests_callback(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    lang = data.get('lang', 'ru')
-    value = callback.data.split(":")[1]
-    selected = data.get('client_requests', [])
-
-    if value == "done":
-        if not selected:
-            await callback.answer("Выберите хотя бы один вариант!" if lang == 'ru' else "Select at least one option!", show_alert=True)
-            return
-        if len(selected) > 7:
-            await callback.answer("Максимум 7 вариантов!" if lang == 'ru' else "Maximum 7 options!", show_alert=True)
-            return
-        text = (
-            "👥 БЛОК 4: ЦЕЛЕВАЯ АУДИТОРИЯ И ПОЗИЦИОНИРОВАНИЕ\n\n"
-            "Опишите вашу целевую аудиторию: пол, возраст, социальный статус, уровень дохода, география (1–2 предложения):"
-            if lang == 'ru'
-            else
-            "👥 BLOCK 4: TARGET AUDIENCE\n\nDescribe your target audience: gender, age, social status, income, geography (1–2 sentences):"
-        )
-        await callback.message.edit_text(text)
-        await state.set_state(FormStates.waiting_for_audience)
-    else:
-        if value in selected:
-            selected.remove(value)
-        else:
-            if len(selected) >= 7:
-                await callback.answer("Максимум 7 вариантов!" if lang == 'ru' else "Maximum 7 options!", show_alert=True)
-                return
-            selected.append(value)
-        await state.update_data(client_requests=selected)
-        keyboard = get_client_requests_keyboard(lang, selected)
-        await callback.message.edit_reply_markup(reply_markup=keyboard)
-    await callback.answer()
-
-
-@router.message(FormStates.waiting_for_audience)
-async def process_audience_description(message: Message, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    audience = validate_text_input(message.text)
-    if audience:
-        await state.update_data(audience=audience)
-        text = (
-            "Как вы себя позиционируете? В чем ваша уникальность? (1–3 предложения):"
-            if lang == 'ru'
-            else
-            "How do you position yourself? What makes you unique? (1–3 sentences):"
-        )
-        await message.answer(text)
-        await state.set_state(FormStates.waiting_for_positioning)
-    else:
-        await message.answer("Введите описание целевой аудитории." if lang == 'ru' else "Enter target audience description.")
-
-
-# ==========================
 # 📸 Фото и завершение анкеты
 # ==========================
-@router.message(FormStates.waiting_for_positioning)
-async def process_positioning(message: Message, state: FSMContext):
-    lang = (await state.get_data()).get('lang', 'ru')
-    positioning = validate_text_input(message.text)
-    if positioning:
-        await state.update_data(positioning=positioning)
-        text = (
-            "📸 Отправьте фото профиля (или нажмите 'Пропустить' для резервного):"
-            if lang == 'ru'
-            else
-            "📸 Send a profile photo (or press 'Skip' for default):"
-        )
-        await message.answer(text, reply_markup=get_photo_keyboard(lang))
-        await state.set_state(FormStates.waiting_for_photo)
-    else:
-        await message.answer("Введите уникальность." if lang == 'ru' else "Enter uniqueness.")
-
 
 @router.callback_query(F.data == 'send_photo')
 async def send_photo_callback(callback: CallbackQuery, state: FSMContext):
@@ -459,17 +221,26 @@ async def send_photo_callback(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == 'skip_photo')
 async def skip_photo_callback(callback: CallbackQuery, state: FSMContext):
     lang = (await state.get_data()).get('lang', 'ru')
+    telegram_id = str(callback.from_user.id)
+
+    # 🔒 Проверка: не отправлять анкету повторно
+    if telegram_id in sent_records_cache:
+        print(f"⚠️ Повторная попытка отправки анкеты от {telegram_id} — пропущено.")
+        return
+    sent_records_cache.add(telegram_id)
+
     await callback.message.edit_text("⌛ Отправляем анкету..." if lang == 'ru' else "⌛ Sending your form...")
     await state.update_data(photo_url=DEFAULT_PHOTO_URL)
     full_data = await state.get_data()
-    full_data['telegram_id'] = callback.from_user.id
+    full_data['telegram_id'] = telegram_id
     print(f"🌍 Язык анкеты при отправке: {full_data.get('lang')}")
     await create_expert_record(full_data)
     await state.clear()
     keyboard = get_status_menu(lang)
     success_text = (
         "✅ Спасибо! Ваша анкета отправлена на проверку."
-        if lang == 'ru' else
+        if lang == 'ru'
+        else
         "✅ Thank you! Your form has been submitted for review."
     )
     await callback.message.edit_text(success_text, reply_markup=keyboard)
@@ -479,21 +250,31 @@ async def skip_photo_callback(callback: CallbackQuery, state: FSMContext):
 @router.message(FormStates.waiting_for_photo)
 async def process_photo(message: Message, state: FSMContext):
     lang = (await state.get_data()).get('lang', 'ru')
+    telegram_id = str(message.from_user.id)
+
+    # 🔒 Проверка: не отправлять анкету повторно
+    if telegram_id in sent_records_cache:
+        print(f"⚠️ Повторная попытка отправки анкеты от {telegram_id} — пропущено.")
+        return
+    sent_records_cache.add(telegram_id)
+
     await message.answer("⌛ Отправляем анкету..." if lang == 'ru' else "⌛ Sending your form...")
     if message.photo:
         photo_url = await get_photo_url(message.photo, fallback_avatar=True)
         await state.update_data(photo_url=photo_url)
     else:
         await state.update_data(photo_url=DEFAULT_PHOTO_URL)
+
     full_data = await state.get_data()
-    full_data['telegram_id'] = message.from_user.id
+    full_data['telegram_id'] = telegram_id
     print(f"🌍 Язык анкеты при отправке: {full_data.get('lang')}")
     await create_expert_record(full_data)
     await state.clear()
     keyboard = get_status_menu(lang)
     success_text = (
         "✅ Спасибо! Ваша анкета отправлена на проверку."
-        if lang == 'ru' else
+        if lang == 'ru'
+        else
         "✅ Thank you! Your form has been submitted for review."
     )
     await message.answer(success_text, reply_markup=keyboard)
