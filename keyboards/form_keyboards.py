@@ -1,6 +1,9 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
+# ============================================================
+# 🔧 Базовая функция для мультивыбора
+# ============================================================
 def create_multiselect_keyboard(options: list, callback_prefix: str, selected: list = None, show_done: bool = True):
     if selected is None:
         selected = []
@@ -14,9 +17,9 @@ def create_multiselect_keyboard(options: list, callback_prefix: str, selected: l
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-# ==========================
+# ============================================================
 # 🔹 Основное направление (Main Direction)
-# ==========================
+# ============================================================
 MAIN_DIRECTION_OPTIONS_RU = [
     ("Коучинг (лайф-коучинг)", "coaching_life"),
     ("Коучинг (бизнес-коучинг)", "coaching_business"),
@@ -39,7 +42,7 @@ MAIN_DIRECTION_OPTIONS_RU = [
 MAIN_DIRECTION_OPTIONS_EN = [
     ("Coaching (life coaching)", "coaching_life"),
     ("Coaching (business coaching)", "coaching_business"),
-    ("Coaching (career)", "coaching_career"),
+    ("Coaching (career coaching)", "coaching_career"),
     ("Psychology (clinical practice)", "psych_clinical"),
     ("Psychology (consulting)", "psych_consulting"),
     ("Psychotherapy (CBT)", "therapy_cbt"),
@@ -57,14 +60,14 @@ MAIN_DIRECTION_OPTIONS_EN = [
 ]
 
 
-# ==========================
+# ============================================================
 # 🔹 Дополнительные методы
-# ==========================
+# ============================================================
 ADDITIONAL_METHODS_OPTIONS_RU = [
     ("НЛП", "nlp"),
     ("Системные расстановки", "constellations"),
     ("Арт-терапия", "art_therapy"),
-    ("МАК", "mac"),
+    ("МАК (метафорические ассоциативные карты)", "mac"),
     ("Медитативные практики", "meditation"),
     ("Дыхательные практики", "breathing"),
     ("Работа с родовыми сценариями", "ancestral_work"),
@@ -84,9 +87,9 @@ ADDITIONAL_METHODS_OPTIONS_EN = [
 ]
 
 
-# ==========================
+# ============================================================
 # 🔹 Образование
-# ==========================
+# ============================================================
 EDUCATION_OPTIONS_RU = [
     ("Высшее психологическое", "psych_higher"),
     ("Высшее медицинское", "medical_higher"),
@@ -105,9 +108,9 @@ EDUCATION_OPTIONS_EN = [
 ]
 
 
-# ==========================
+# ============================================================
 # 🔹 Опыт
-# ==========================
+# ============================================================
 EXPERIENCE_OPTIONS_RU = [
     ("Менее 1 года", "less_1"),
     ("1-2 года", "1_2"),
@@ -128,34 +131,34 @@ EXPERIENCE_OPTIONS_EN = [
 ]
 
 
-# ==========================
+# ============================================================
 # 🔹 Форматы работы
-# ==========================
+# ============================================================
 WORK_FORMAT_OPTIONS_RU = [
     ("Индивидуальные сессии (онлайн)", "individual_online"),
     ("Индивидуальные сессии (офлайн)", "individual_offline"),
     ("Групповые программы (онлайн)", "group_online"),
     ("Групповые программы (офлайн)", "group_offline"),
-    ("Марафоны/челленджи", "marathons"),
-    ("Интенсивы/ретриты", "intensives"),
+    ("Марафоны / челленджи", "marathons"),
+    ("Интенсивы / ретриты", "intensives"),
     ("Обучающие курсы", "courses"),
-    ("Вебинары/мастер-классы", "webinars"),
+    ("Вебинары / мастер-классы", "webinars"),
 ]
 WORK_FORMAT_OPTIONS_EN = [
     ("Individual sessions (online)", "individual_online"),
     ("Individual sessions (offline)", "individual_offline"),
     ("Group programs (online)", "group_online"),
     ("Group programs (offline)", "group_offline"),
-    ("Marathons/challenges", "marathons"),
-    ("Intensives/retreats", "intensives"),
+    ("Marathons / challenges", "marathons"),
+    ("Intensives / retreats", "intensives"),
     ("Training courses", "courses"),
-    ("Webinars/master classes", "webinars"),
+    ("Webinars / master classes", "webinars"),
 ]
 
 
-# ==========================
+# ============================================================
 # 🔹 Количество клиентов
-# ==========================
+# ============================================================
 CLIENTS_COUNT_OPTIONS_RU = [
     ("1-5 клиентов", "1_5"),
     ("5-10 клиентов", "5_10"),
@@ -174,9 +177,9 @@ CLIENTS_COUNT_OPTIONS_EN = [
 ]
 
 
-# ==========================
-# 💰 Средний чек (исправленный)
-# ==========================
+# ============================================================
+# 💰 Средний чек
+# ============================================================
 AVERAGE_CHECK_OPTIONS_RU = [
     ("до 10 тыс рублей", "under_10k"),
     ("10–30 тыс рублей", "10_30k"),
@@ -193,60 +196,60 @@ AVERAGE_CHECK_OPTIONS_EN = [
 ]
 
 
-# ==========================
+# ============================================================
 # 🔹 Клиентские запросы
-# ==========================
+# ============================================================
 CLIENT_REQUESTS_OPTIONS_RU = [
     ("Тревожность, панические атаки, страхи", "anxiety"),
     ("Депрессия, апатия, потеря смысла", "depression"),
-    ("Самооценка и уверенность", "self_esteem"),
-    ("Отношения с партнером", "partner_relations"),
-    ("Поиск партнера, одиночество", "partner_search"),
+    ("Самооценка и уверенность", "selfesteem"),
+    ("Отношения с партнером", "relationship_partner"),
+    ("Поиск партнера, одиночество", "find_partner"),
     ("Расставание, развод", "breakup"),
     ("Детско-родительские отношения", "parent_child"),
-    ("Отношения с родителями", "parent_relations"),
+    ("Отношения с родителями", "parents"),
     ("Профессиональное выгорание", "burnout"),
-    ("Поиск предназначения", "purpose_search"),
+    ("Поиск предназначения", "purpose"),
     ("Карьерные вопросы", "career"),
-    ("Финансовые блоки", "financial_blocks"),
+    ("Финансовые блоки", "financial"),
     ("Целеполагание", "goal_setting"),
     ("Прокрастинация, мотивация", "procrastination"),
     ("Женские темы", "women_topics"),
     ("Мужские темы", "men_topics"),
     ("Психосоматика", "psychosomatics"),
     ("Работа с травмой (ПТСР)", "trauma"),
-    ("Работа с внутренними частями", "internal_parts"),
-    ("Духовное развитие", "spiritual_development"),
+    ("Работа с внутренними частями личности", "inner_parts"),
+    ("Духовное развитие", "spiritual"),
     ("Другое", "other"),
 ]
 CLIENT_REQUESTS_OPTIONS_EN = [
     ("Anxiety, panic attacks, fears", "anxiety"),
     ("Depression, apathy, loss of meaning", "depression"),
-    ("Self-esteem and confidence", "self_esteem"),
-    ("Relationships with partner", "partner_relations"),
-    ("Finding a partner, loneliness", "partner_search"),
+    ("Self-esteem and confidence", "selfesteem"),
+    ("Relationships with partner", "relationship_partner"),
+    ("Finding a partner, loneliness", "find_partner"),
     ("Breakup, divorce, loss", "breakup"),
     ("Parent-child relationships", "parent_child"),
-    ("Relationships with parents", "parent_relations"),
+    ("Relationships with parents", "parents"),
     ("Professional burnout", "burnout"),
-    ("Purpose search, life path", "purpose_search"),
+    ("Purpose search, life path", "purpose"),
     ("Career issues, professional change", "career"),
-    ("Financial blocks, money relationships", "financial_blocks"),
+    ("Financial blocks", "financial"),
     ("Goal setting, achieving goals", "goal_setting"),
     ("Procrastination, motivation", "procrastination"),
     ("Women's topics", "women_topics"),
     ("Men's topics", "men_topics"),
     ("Psychosomatics", "psychosomatics"),
     ("Trauma work (PTSD)", "trauma"),
-    ("Working with inner parts of personality", "internal_parts"),
-    ("Spiritual development, self-search", "spiritual_development"),
+    ("Working with inner parts", "inner_parts"),
+    ("Spiritual development", "spiritual"),
     ("Other", "other"),
 ]
 
 
-# ==========================
+# ============================================================
 # 🔸 Генераторы клавиатур
-# ==========================
+# ============================================================
 def get_main_direction_keyboard(lang, selected=None):
     return create_multiselect_keyboard(
         MAIN_DIRECTION_OPTIONS_EN if lang == 'en' else MAIN_DIRECTION_OPTIONS_RU, "main_direction", selected or [])

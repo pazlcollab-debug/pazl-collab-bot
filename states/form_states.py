@@ -11,11 +11,11 @@ class FormStates(StatesGroup):
     # Блок 2: Профессиональная экспертиза
     waiting_for_expertise = State()
     waiting_for_main_direction = State()
-    waiting_for_main_direction_other = State()     # <-- Добавить!
+    waiting_for_main_direction_other = State()     
     waiting_for_additional_methods = State()
-    waiting_for_additional_methods_other = State() # <-- Добавить!
+    waiting_for_additional_methods_other = State() 
     waiting_for_education = State()
-    waiting_for_education_other = State()          # <-- Добавить если используется!
+    waiting_for_education_other = State()          
     waiting_for_experience = State()
 
     # Блок 3: Формат и объем практики
@@ -23,7 +23,7 @@ class FormStates(StatesGroup):
     waiting_for_clients = State()
     waiting_for_price = State()
     waiting_for_requests = State()
-    waiting_for_requests_other = State()           # <-- Добавить если используется!
+    waiting_for_requests_other = State()           
     
     # Блок 4: Целевая аудитория
     waiting_for_audience = State()

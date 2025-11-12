@@ -1,0 +1,90 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 🌌 Глобальные стили приложения PAZL Collab */
+:root {
+  font-family: 'Manrope', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+  color-scheme: dark;
+  color: #fff;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  transition: background 0.4s ease-in-out;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Ссылки */
+a {
+  color: #60a5fa;
+  text-decoration: none;
+  transition: color 0.25s ease;
+}
+a:hover {
+  color: #93c5fd;
+}
+
+/* Общие параметры тела */
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  transition: background 0.4s ease-in-out;
+}
+
+/* Кнопки */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  background-color: #1a1a1a;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+button:hover {
+  background-color: #2563eb;
+}
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.5);
+}
+
+/* Текстовые заголовки */
+h1, h2, h3, h4 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Плавный скролл и выравнивание */
+html, body {
+  scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Адаптация под тёмную тему */
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #111;
+    background: linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%);
+  }
+  a {
+    color: #2563eb;
+  }
+  a:hover {
+    color: #1d4ed8;
+  }
+  button {
+    background-color: #f9fafb;
+    color: #111;
+  }
+}
