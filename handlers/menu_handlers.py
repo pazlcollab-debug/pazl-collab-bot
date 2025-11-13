@@ -4,27 +4,33 @@ from config import WEBAPP_URL
 
 router = Router()
 
-
+# ==========================
+# ⚙️ Мой профиль
+# ==========================
 @router.message(lambda msg: msg.text in ["⚙️ Мой профиль", "⚙️ My profile"])
 async def open_profile(message: types.Message):
     """Открывает Mini App с профилем пользователя"""
     telegram_id = message.from_user.id
-    webapp_url = f"{WEBAPP_URL}/profile/{telegram_id}"  # ✅ теперь корректный маршрут
+    
+    # 💡 ВАЖНО: Mini App находится в /webapp
+    webapp_url = f"{WEBAPP_URL}/webapp/profile/{telegram_id}"
 
-    # создаём inline-кнопку
+    # создаём inline-кнопку с WebApp
     builder = InlineKeyboardBuilder()
     builder.button(
-        text="Открыть мой профиль 🌐",
+        text="🌐 Открыть мой профиль",
         web_app=types.WebAppInfo(url=webapp_url)
     )
 
-    # сообщение пользователю
     await message.answer(
         "🧩 Нажмите кнопку ниже, чтобы открыть ваш профиль:",
         reply_markup=builder.as_markup()
     )
 
 
+# ==========================
+# 📘 Инструкции
+# ==========================
 @router.message(lambda msg: msg.text in ["📘 Инструкции", "📘 Instructions"])
 async def show_instructions(message: types.Message):
     """Показывает краткую инструкцию"""

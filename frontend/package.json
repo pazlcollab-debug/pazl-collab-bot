@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "clean-ngrok-log": "del ngrok.log 2>nul || rm -f ngrok.log",
+    "ngrok": "npm run clean-ngrok-log && ngrok http 5173 --log=stdout > ngrok.log &",
+    "update-env": "node scripts/updateEnv.js",
+    "tunnel": "concurrently -n FRONT,NGROK,BOT -c green,cyan,yellow \"npm run dev\" \"npm run ngrok && npm run update-env\" \"npm run bot\"",
+    "bot": "cd .. && python main.py"
   },
   "dependencies": {
     "framer-motion": "^12.23.24",
@@ -22,6 +27,9 @@
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.1.0",
     "autoprefixer": "^10.4.22",
+    "chalk": "^5.6.2",
+    "concurrently": "^9.1.0",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.24",

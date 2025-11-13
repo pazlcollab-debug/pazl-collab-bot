@@ -1,200 +1,130 @@
 ﻿import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  useTransform,
-} from "framer-motion";
+import { useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 
-function Profile() {
+export default function Profile() {
   const { telegram_id } = useParams();
-  const navigate = useNavigate();
-  const [experts, setExperts] = useState([]);
-  const [index, setIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
 
-  // Загружаем всех экспертов
+  const [profile, setProfile] = useState(null);
+  const [error, setError] = useState(null);
+  const [fullUrl, setFullUrl] = useState(null); // ⭐ Показываем реальный URL
+
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/experts?limit=50")
+    if (!telegram_id) {
+      setError("❌ Telegram ID not found in URL");
+      return;
+    }
+
+    const url = `${import.meta.env.VITE_API_URL}/api/profile/${telegram_id}`;
+    setFullUrl(url);
+
+    console.log("📡 Запрос к API:", url);
+
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        const list = data.experts || [];
-        setExperts(list);
-        const idx = list.findIndex(
-          (e) => e.telegram === telegram_id || e.id === telegram_id
-        );
-        setIndex(idx >= 0 ? idx : 0);
-        setLoading(false);
+        console.log("📥 Ответ API:", data);
+        if (data.error) setError(data.error);
+        else setProfile(data);
       })
       .catch((err) => {
-        console.error("Ошибка загрузки:", err);
-        setLoading(false);
+        console.error("❌ Fetch error:", err);
+        setError(err.message);
       });
   }, [telegram_id]);
 
-  if (loading) {
+  // ❌ Ошибка загрузки
+  if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-400 bg-gray-950">
-        Загрузка профиля...
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-blue-950 text-red-400 font-medium px-6 text-center">
+
+        <div className="text-xl mb-4">❌ Ошибка загрузки профиля</div>
+
+        <div className="mt-2 text-sm text-gray-300 break-all">
+          <b>URL запроса:</b><br />
+          {fullUrl}
+        </div>
+
+        <div className="mt-4 text-sm text-gray-400">
+          <b>Ошибка:</b> {error}
+        </div>
       </div>
     );
   }
 
-  const expert = experts[index];
-  if (!expert) {
+  // ⏳ Профиль ещё грузится
+  if (!profile)
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-gray-400 bg-gray-950 space-y-4">
-        <p>❌ Профиль не найден</p>
-        <button
-          onClick={() => navigate(-1)}
-          className="px-5 py-2 rounded-full bg-gray-800 hover:bg-gray-700 text-white transition"
-        >
-          ← Назад
-        </button>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-blue-950 text-gray-300 font-medium">
+        ⏳ Загрузка профиля...
       </div>
     );
-  }
 
-  // Перелистывание
-  const handleSwipe = (direction) => {
-    if (direction === "left" && index < experts.length - 1) {
-      setIndex(index + 1);
-    } else if (direction === "right" && index > 0) {
-      setIndex(index - 1);
-    }
-  };
-
-  // Motion эффекты
-  const x = useMotionValue(0);
-
-  // Свечение
-  const glow = useTransform(
-    x,
-    [-150, 0, 150],
-    [
-      "0 0 40px rgba(59,130,246,0.25)", // слева
-      "0 0 0px rgba(0,0,0,0)", // центр
-      "0 0 40px rgba(147,51,234,0.3)", // справа
-    ]
-  );
-
-  // Динамический градиентный блик
-  const gloss = useTransform(
-    x,
-    [-150, 0, 150],
-    [
-      "linear-gradient(120deg, rgba(59,130,246,0.2) 0%, rgba(255,255,255,0) 70%)",
-      "linear-gradient(120deg, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.02) 70%)",
-      "linear-gradient(240deg, rgba(147,51,234,0.2) 0%, rgba(255,255,255,0) 70%)",
-    ]
-  );
-
-  const variants = {
-    enter: (direction) => ({
-      x: direction > 0 ? 200 : -200,
-      opacity: 0,
-    }),
-    center: { x: 0, opacity: 1 },
-    exit: (direction) => ({
-      x: direction < 0 ? 200 : -200,
-      opacity: 0,
-    }),
-  };
-
+  // 🎉 Профиль загружен
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 flex flex-col items-center justify-center text-white px-4 relative overflow-hidden">
-      {/* Кнопка Назад */}
-      <button
-        onClick={() => navigate(-1)}
-        className="absolute top-6 left-6 bg-gray-800/70 hover:bg-gray-700/90 text-white px-4 py-2 rounded-full shadow-md transition-all duration-300 z-10"
+    <motion.div
+      className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-950 flex flex-col items-center px-4 py-8 text-white"
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
+      {/* Фото */}
+      {profile.photo_url ? (
+        <motion.img
+          src={profile.photo_url}
+          alt="Фото эксперта"
+          className="w-20 h-20 rounded-full shadow-xl border-2 border-white object-cover mb-3"
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+        />
+      ) : (
+        <div className="w-20 h-20 rounded-full bg-gray-600 flex items-center justify-center text-2xl mb-3">
+          👤
+        </div>
+      )}
+
+      {/* Имя */}
+      <h1 className="text-xl font-bold mb-1">{profile.name}</h1>
+      <p className="text-gray-400 mb-5 text-center text-sm">
+        {profile.direction || "—"} · {profile.city || "Не указан город"}
+      </p>
+
+      {/* Карточка */}
+      <motion.div
+        className="bg-white/10 backdrop-blur-md rounded-2xl p-4 w-full max-w-md border border-white/20 shadow-lg space-y-2"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
       >
-        ← Назад
-      </button>
+        <InfoRow label="🎯 Направление" value={profile.direction} />
+        <InfoRow label="💼 Опыт" value={profile.experience} />
+        <InfoRow label="📚 Образование" value={profile.education} />
+        <InfoRow label="💬 Язык" value={profile.language} />
+        <InfoRow label="📞 Telegram" value={profile.telegram} />
+        <InfoRow label="🧠 Методы" value={profile.methods?.join(", ")} />
+        <InfoRow label="💡 Форматы" value={profile.formats?.join(", ")} />
+      </motion.div>
 
-      {/* Контейнер карточек */}
-      <div className="w-full max-w-sm h-[520px] flex items-center justify-center relative">
-        <AnimatePresence custom={index}>
-          <motion.div
-            key={expert.id}
-            custom={index}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{
-              x: { type: "spring", stiffness: 300, damping: 30 },
-              opacity: { duration: 0.2 },
-            }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.6}
-            style={{
-              x,
-              boxShadow: glow,
-              backgroundImage: gloss,
-              backgroundBlendMode: "screen",
-            }}
-            onDragEnd={(e, { offset, velocity }) => {
-              const swipe =
-                Math.abs(offset.x) > 100 && Math.abs(velocity.x) > 100;
-              if (swipe) handleSwipe(offset.x < 0 ? "left" : "right");
-            }}
-            className="absolute bg-gray-800/40 p-6 rounded-3xl shadow-2xl w-full border border-gray-700 text-center backdrop-blur-md transition-all duration-300"
-          >
-            {/* Фото */}
-            <motion.div
-              animate={{ scale: [1, 1.03, 1] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-4 ring-2 ring-blue-500/50 shadow-lg"
-            >
-              <img
-                src={expert.photo_url || "/default-avatar.jpg"}
-                alt={expert.name}
-                className="w-full h-full object-cover"
-              />
-            </motion.div>
+      <motion.button
+        className="mt-5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold py-2 px-5 rounded-full shadow-md hover:shadow-lg transition-all text-sm"
+        onClick={() => alert("Функция редактирования скоро будет доступна.")}
+        whileTap={{ scale: 0.97 }}
+      >
+        ✏️ Редактировать профиль
+      </motion.button>
 
-            {/* Имя и направление */}
-            <h1 className="text-2xl font-semibold">{expert.name}</h1>
-            <p className="text-blue-400 text-sm mt-1">
-              {expert.direction || "Без направления"}
-            </p>
-
-            {/* Остальная информация */}
-            <div className="mt-4 space-y-1 text-sm text-gray-300">
-              <p>🌍 {expert.city || "Город не указан"}</p>
-              <p>💬 {expert.language?.toUpperCase() || "RU"}</p>
-            </div>
-
-            {/* Telegram-кнопка */}
-            {expert.telegram && (
-              <a
-                href={`https://t.me/${expert.telegram.replace("@", "")}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-6 inline-block bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-6 rounded-full shadow-md hover:shadow-blue-500/40 hover:scale-105 transition-transform duration-300"
-              >
-                Связаться в Telegram
-              </a>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      {/* Индикатор карточек */}
-      <div className="mt-6 flex space-x-2">
-        {experts.slice(0, 6).map((_, i) => (
-          <div
-            key={i}
-            className={`w-2 h-2 rounded-full transition-all ${
-              i === index ? "bg-blue-400 w-3" : "bg-gray-600"
-            }`}
-          />
-        ))}
-      </div>
-    </div>
+      <p className="text-gray-500 text-xs mt-6">PAZL Collab · Mini App Beta</p>
+    </motion.div>
   );
 }
 
-export default Profile;
+function InfoRow({ label, value }) {
+  if (!value) return null;
+  return (
+    <div className="flex justify-between items-start text-sm">
+      <span className="text-gray-200">{label}</span>
+      <span className="text-gray-100 text-right max-w-[60%]">{value}</span>
+    </div>
+  );
+}
