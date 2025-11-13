@@ -2,23 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 🌌 Плавный живой фон — эффект дыхания */
-@keyframes gradientShift {
+/* ==========================================
+   ⭐ VisionOS Skeleton Shimmer Animation
+   Используется в Placeholder-карточке загрузки
+   ========================================== */
+
+@keyframes skeleton-shimmer {
   0% {
-    background-position: 0% 50%;
+    opacity: 0.35;
+    transform: translateX(-10px);
   }
   50% {
-    background-position: 100% 50%;
+    opacity: 0.8;
+    transform: translateX(0px);
   }
   100% {
-    background-position: 0% 50%;
+    opacity: 0.35;
+    transform: translateX(10px);
   }
 }
 
-/* 🚀 Параллакс-эффект движения при скролле */
-.bg-animate {
-  background: linear-gradient(-45deg, #0b0b0b, #151515, #1a1a1a, #0e0e0e);
-  background-size: 400% 400%;
-  animation: gradientShift 25s ease infinite;
-  background-attachment: fixed; /* 🎯 ключ для параллакса */
+.skeleton-shimmer {
+  animation: skeleton-shimmer 1.4s ease-in-out infinite alternate;
+}
+
+/* ==========================================
+   ⭐ VisionOS Utility (может пригодиться позже)
+   Для мягких стеклянных бликов
+   ========================================== */
+
+.vision-card {
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* (Можно добавлять сюда VisionOS классы позже)
+*/
+/* ==========================================
+   ⭐ Fade-in + light blur (VisionOS style)
+   ========================================== */
+
+@keyframes fadeInSmooth {
+  0% {
+    opacity: 0;
+    filter: blur(12px);
+    transform: scale(1.03);
+  }
+  60% {
+    opacity: 0.8;
+    filter: blur(4px);
+    transform: scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: scale(1);
+  }
+}
+
+.fade-in-image {
+  animation: fadeInSmooth 0.6s ease-out forwards;
 }

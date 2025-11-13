@@ -115,10 +115,8 @@ async def finalize_form(obj, state: FSMContext, lang: str, telegram_id: str, pho
         await create_expert_record(full_data)
         print(Fore.GREEN + f"[{telegram_id}] ✅ Анкета успешно отправлена в Airtable")
 
-        # ✅ Добавляем пользователя в кэш только после успешной записи
         sent_records_cache.add(str(telegram_id))
 
-        # ✅ Финальное сообщение пользователю
         text = (
             "✅ Спасибо! Ваша анкета успешно отправлена на проверку.\n\n"
             "📊 Теперь вы можете проверить её статус, нажав кнопку ниже 👇"
@@ -129,25 +127,20 @@ async def finalize_form(obj, state: FSMContext, lang: str, telegram_id: str, pho
         )
 
         await state.clear()
-        keyboard = get_status_menu(lang)  # меню «Проверить статус анкеты»
 
-        if is_callback:
-            await obj.edit_text(text, reply_markup=keyboard)
-        else:
-            await obj.answer(text, reply_markup=keyboard)
+        await obj.answer(text, reply_markup=get_status_menu(lang))
 
     except Exception as e:
         print(Fore.RED + f"[{telegram_id}] ❌ Ошибка при отправке анкеты: {e}")
+
         error_text = (
             "❌ Ошибка при отправке анкеты, попробуйте позже."
             if lang == "ru"
             else
             "❌ Error submitting form, try later."
         )
-        if is_callback:
-            await obj.edit_text(error_text, reply_markup=get_main_menu(lang))
-        else:
-            await obj.answer(error_text, reply_markup=get_main_menu(lang))
+
+        await obj.answer(error_text, reply_markup=get_main_menu(lang))
         await state.clear()
 # ==========================
 # 📊 Проверка статуса анкеты
@@ -640,7 +633,7 @@ async def process_positioning(message: Message, state: FSMContext):
 async def send_photo_callback(callback: CallbackQuery, state: FSMContext):
     lang = (await state.get_data()).get("lang", "ru")
     await callback.message.edit_text(
-        "📸 Отправьте фото профиля:" if lang == "ru" else "📸 Send a profile photo:",
+        "📸 Отправьте фото для профиля в PAZL Collab:" if lang == "ru" else "📸 Send a photo for your profile in PAZL Collab:",
         reply_markup=get_skip_keyboard(lang)
     )
     await state.set_state(FormStates.waiting_for_photo)
