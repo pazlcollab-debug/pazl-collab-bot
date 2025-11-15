@@ -1,33 +1,47 @@
 import requests
 from config import AIRTABLE_API_KEY, AIRTABLE_BASE_ID
+from services.cache import get_cache
+from services.airtable_client import get_airtable_client
+import logging
+
+logger = logging.getLogger(__name__)
 
 TABLE_NAME = "Experts"
-AIRTABLE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{TABLE_NAME}"
-HEADERS = {"Authorization": f"Bearer {AIRTABLE_API_KEY}"}
+CACHE_TTL = 300  # 5 минут кэширования
 
 
-def get_approved_experts():
+def get_approved_experts(use_cache: bool = True):
     """
     Возвращает всех экспертов со статусом 'Approved' или 'Одобрено'
     (поддерживает RU/EN форматы и эмодзи перед статусом)
+    С кэшированием для уменьшения нагрузки на Airtable API
     """
-    formula = "OR({Status}='🟢 Approved', {Status}='Approved', {Status}='🟢 Одобрено', {Status}='Одобрено')"
-    params = {"filterByFormula": formula, "maxRecords": 100, "view": "Grid view"}
-
+    cache = get_cache()
+    cache_key = "approved_experts"
+    
+    # Проверяем кэш
+    if use_cache:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            logger.debug("Returning cached experts list")
+            return cached
+    
     try:
-        response = requests.get(AIRTABLE_URL, headers=HEADERS, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-
-        if "records" not in data:
-            print("⚠️ Ответ Airtable не содержит ключ 'records':", data)
-            return []
+        client = get_airtable_client()
+        formula = "OR({Status}='🟢 Approved', {Status}='Approved', {Status}='🟢 Одобрено', {Status}='Одобрено')"
+        
+        records = client.get_records(
+            table_name=TABLE_NAME,
+            formula=formula,
+            max_records=100
+        )
 
         experts = []
-        for record in data["records"]:
+        for record in records:
             fields = record.get("fields", {})
             expert = {
                 "id": record.get("id"),
+                "telegram_id": str(fields.get("TelegramID", "")) if fields.get("TelegramID") is not None else "",
                 "name": fields.get("Name"),
                 "city": fields.get("City"),
                 "language": fields.get("Language", "ru"),  # 🔹 язык по умолчанию
@@ -56,16 +70,19 @@ def get_approved_experts():
             }
             experts.append(expert)
 
+        # Сохраняем в кэш
+        if use_cache:
+            cache.set(cache_key, experts, ttl=CACHE_TTL)
+            logger.info(f"Cached {len(experts)} approved experts for {CACHE_TTL} seconds")
+
         return experts
 
-    except requests.Timeout:
-        print("⏳ Ошибка: превышено время ожидания ответа Airtable")
-        return []
-
-    except requests.RequestException as e:
-        print(f"🚨 Ошибка запроса к Airtable: {e}")
-        return []
-
     except Exception as e:
-        print(f"⚠️ Неизвестная ошибка при получении экспертов: {e}")
+        logger.error(f"Error fetching approved experts: {e}", exc_info=True)
+        # В случае ошибки пытаемся вернуть кэшированные данные, если есть
+        if use_cache:
+            cached = cache.get(cache_key)
+            if cached is not None:
+                logger.warning("Returning stale cache due to error")
+                return cached
         return []

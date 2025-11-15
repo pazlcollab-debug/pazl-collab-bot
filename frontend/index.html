@@ -3,8 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="telegram-web-app" content="true" />
+    <base href="/webapp/" />
+    <title>PAZL Collab</title>
+    <!-- Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+      // Ждем загрузки Telegram WebApp API
+      function initTelegramWebApp() {
+        if (window.Telegram && window.Telegram.WebApp) {
+          console.log('✅ Telegram WebApp API loaded');
+          window.Telegram.WebApp.ready();
+          window.Telegram.WebApp.expand();
+          
+          // Логируем данные пользователя
+          if (window.Telegram.WebApp.initDataUnsafe?.user) {
+            console.log('✅ User data:', window.Telegram.WebApp.initDataUnsafe.user);
+          } else {
+            console.warn('⚠️ User data not available in initDataUnsafe');
+          }
+        } else {
+          console.warn('⚠️ Telegram WebApp API not available (might be opened in browser)');
+        }
+      }
+      
+      // Пытаемся инициализировать сразу
+      initTelegramWebApp();
+      
+      // Если не загрузилось, ждем немного и пробуем снова
+      if (!window.Telegram || !window.Telegram.WebApp) {
+        setTimeout(initTelegramWebApp, 100);
+        setTimeout(initTelegramWebApp, 500);
+      }
+      
+      // Логирование для отладки
+      console.log('Index.html loaded');
+      console.log('Current path:', window.location.pathname);
+      console.log('Base href:', document.querySelector('base')?.href);
+    </script>
   </head>
   <body>
     <div id="root"></div>

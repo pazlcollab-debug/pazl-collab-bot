@@ -110,16 +110,16 @@ async def show_instructions(message: types.Message, state: FSMContext):
         text = (
             "📘 *Инструкции по работе с PAZL Collab*\n\n"
             "1️⃣ После модерации анкеты ваш профиль появляется в каталоге.\n"
-            "2️⃣ В Mini App можно редактировать данные и видеть свою карточку.\n"
-            "3️⃣ Чтобы найти партнёров — используйте раздел каталога.\n\n"
+            "2️⃣ В Mini App можно предлагать пользователям партнёрство.\n"
+            "3️⃣ Чтобы найти партнёров — используйте кнопки ниже «Найти партнёра ...».\n\n"
             "❓ Если есть вопросы — обращайтесь к модератору."
         )
     else:
         text = (
             "📘 *Instructions for PAZL Collab*\n\n"
             "1️⃣ After moderation your profile appears in the catalog.\n"
-            "2️⃣ In Mini App you can edit your data and view your card.\n"
-            "3️⃣ To find partners — use the catalog section.\n\n"
+            "2️⃣ In the Mini App you can propose partnerships to other users.\n"
+            "3️⃣ To find partners — use the “Find partner …” buttons below.\n\n"
             "❓ If you have questions — contact the moderator."
         )
 

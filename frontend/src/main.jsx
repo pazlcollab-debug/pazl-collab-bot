@@ -1,57 +1,69 @@
 ﻿import React, { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import {
-  createBrowserRouter,
-  RouterProvider,
-  useLocation,
-} from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
-
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
-import App from "./App.jsx";
-import Profile from "./pages/Profile.jsx";
+import Gallery from "./pages/Gallery";
+import Profile from "./pages/Profile";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // ==============================
 // 🚀 Маршруты
 // ==============================
+// Важно: basename должен совпадать с base в vite.config.js и <base href> в index.html
 const router = createBrowserRouter(
   [
-    { path: "/", element: <App /> },
-    { path: "/profile/:telegram_id", element: <Profile /> },
+    { 
+      path: "/", 
+      element: <Gallery />, // Default to gallery
+      errorElement: <ErrorBoundary />
+    },
+    { 
+      path: "/gallery", 
+      element: <Gallery />,
+      errorElement: <ErrorBoundary />
+    },
+    { 
+      path: "/profile/:telegram_id", 
+      element: <Profile />,
+      errorElement: <ErrorBoundary />
+    },
+    {
+      path: "*", // Catch all unmatched routes - должен быть последним
+      element: <ErrorBoundary />
+    }
   ],
   {
-    basename: "/webapp", // ❗ ОБЯЗАТЕЛЬНО
+    basename: "/webapp", // ❗ ОБЯЗАТЕЛЬНО - должен совпадать с base в vite.config.js
+    future: {
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    }
   }
 );
 
 // ==============================
-// 🎨 Обёртка с правильным location
+// 🔥 Рендер с обработкой ошибок
 // ==============================
-function AnimatedRoutes() {
-  const location = useLocation(); // 👈 ВАЖНО!
+const rootElement = document.getElementById("root");
 
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname} // теперь работает правильно
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-      >
-        <RouterProvider router={router} />
-      </motion.div>
-    </AnimatePresence>
-  );
+if (!rootElement) {
+  throw new Error("Root element not found");
 }
 
-// ==============================
-// 🔥 Рендер
-// ==============================
-createRoot(document.getElementById("root")).render(
-  <StrictMode>
-    <RouterProvider router={router}>
-      <AnimatedRoutes />
-    </RouterProvider>
-  </StrictMode>
-);
+const root = createRoot(rootElement);
+
+// Обработка ошибок на уровне приложения
+try {
+  root.render(
+    <StrictMode>
+      <RouterProvider 
+        router={router}
+        fallbackElement={<ErrorBoundary />}
+      />
+    </StrictMode>
+  );
+} catch (error) {
+  // Если ошибка при рендере, показываем ErrorBoundary напрямую
+  console.error("Fatal error during render:", error);
+  root.render(<ErrorBoundary />);
+}

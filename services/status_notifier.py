@@ -101,10 +101,11 @@ async def check_expert_status(bot):
             approved_count = 0
 
             # --- Проверка существующих ID ---
+            # TelegramID в Airtable - Number, преобразуем в строку для сравнения
             existing_ids = {
                 str(rec.get("fields", {}).get("TelegramID"))
                 for rec in records
-                if rec.get("fields", {}).get("TelegramID")
+                if rec.get("fields", {}).get("TelegramID") is not None
             }
 
             # --- Удалённые анкеты ---
@@ -134,7 +135,11 @@ async def check_expert_status(bot):
             for rec in records:
                 fields = rec.get("fields", {})
                 record_id = rec.get("id")
-                telegram_id = str(fields.get("TelegramID"))
+                # TelegramID в Airtable - Number, преобразуем в строку
+                telegram_id_raw = fields.get("TelegramID")
+                if telegram_id_raw is None:
+                    continue
+                telegram_id = str(telegram_id_raw)
                 raw_status = str(fields.get("Status", "")).strip().lower()
 
                 # --- Определяем язык анкеты ---

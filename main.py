@@ -33,10 +33,11 @@ async def notify_pending_approved(bot: Bot):
         for rec in records:
             fields = rec.get("fields", {})
             record_id = rec.get("id")
+            # TelegramID в Airtable - Number
             telegram_id = fields.get("TelegramID")
             lang = fields.get("Language", "ru")
 
-            if not telegram_id:
+            if telegram_id is None:
                 continue
 
             text = (
@@ -67,10 +68,22 @@ async def notify_pending_approved(bot: Bot):
 # 🚀 Основная функция запуска бота
 # ============================================================
 async def main():
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | [%(levelname)s] | %(message)s"
-    )
+    # Настройка структурированного логирования
+    from services.logger_config import setup_logging
+    from config import ENV
+    
+    # В продакшене используем JSON формат, в dev - обычный
+    json_format = ENV == "prod"
+    setup_logging(level="INFO", json_format=json_format)
+    
+    # Проверка конфигурации
+    from config import validate_config
+    try:
+        validate_config()
+    except ValueError as e:
+        logging.error(str(e))
+        return
+    
     logging.info("🚀 PAZL Collab Bot v1.0 запущен")
 
     bot = Bot(token=BOT_TOKEN)
@@ -81,6 +94,10 @@ async def main():
     dp.include_router(start.router)
     dp.include_router(form.router)
     dp.include_router(menu_handlers.router)
+    
+    # 🤝 Обработчик предложений партнерства
+    from handlers import partnership
+    dp.include_router(partnership.router)
 
     # ============================================================
     # 🔗 Проверка подключения к Airtable

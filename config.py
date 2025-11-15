@@ -22,5 +22,34 @@ WEBAPP_URL = os.getenv("WEBAPP_URL", "http://localhost:5173")
 ENV = os.getenv("ENV", "dev")
 
 # --- Проверка конфигурации ---
-if not BOT_TOKEN or not AIRTABLE_API_KEY or not AIRTABLE_BASE_ID:
-    print("⚠️ Внимание: отсутствуют обязательные переменные окружения! Проверь .env или Secrets Railway.")
+def validate_config():
+    """Проверяет наличие всех обязательных переменных окружения"""
+    missing = []
+    
+    if not BOT_TOKEN:
+        missing.append("BOT_TOKEN")
+    if not AIRTABLE_API_KEY:
+        missing.append("AIRTABLE_API_KEY")
+    if not AIRTABLE_BASE_ID:
+        missing.append("AIRTABLE_BASE_ID")
+    
+    if missing:
+        error_msg = (
+            f"❌ Ошибка конфигурации: отсутствуют обязательные переменные окружения: {', '.join(missing)}\n"
+            "Проверьте .env файл или переменные окружения."
+        )
+        raise ValueError(error_msg)
+    
+    return True
+
+
+# Автоматическая проверка при импорте (можно отключить для тестов)
+if __name__ != "__main__":
+    try:
+        validate_config()
+    except ValueError:
+        # В dev режиме только предупреждаем, не падаем
+        if ENV == "dev":
+            print("⚠️ Внимание: отсутствуют обязательные переменные окружения! Проверь .env или Secrets Railway.")
+        else:
+            raise

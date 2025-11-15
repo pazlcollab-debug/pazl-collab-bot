@@ -6,7 +6,14 @@ from pyairtable.formulas import match
 
 from states.form_states import FormStates
 from services.airtable_api import create_expert_record, get_table
-from services.utils import validate_text_input, get_photo_url
+from services.utils import (
+    validate_text_input, 
+    get_photo_url,
+    validate_phone,
+    validate_telegram_username,
+    validate_url,
+    sanitize_text
+)
 from config import DEFAULT_PHOTO_URL
 from keyboards.main_menu import get_main_menu, get_status_menu, get_post_approval_menu  # ✅ добавлен новый импорт
 from keyboards.form_keyboards import (
@@ -70,7 +77,8 @@ async def check_existing_form(telegram_id: int):
     """Проверяет, есть ли у пользователя анкета, и форматирует дату красиво."""
     table = get_table()
     try:
-        records = table.all(formula=match({"TelegramID": str(telegram_id)}))
+        # TelegramID в Airtable - Number, передаем как число
+        records = table.all(formula=match({"TelegramID": telegram_id}))
         if not records:
             return None
 
@@ -189,7 +197,8 @@ async def check_form_status(message: Message, state: FSMContext):
             from services.airtable_api import get_table
             from pyairtable.formulas import match
             table = get_table()
-            records = table.all(formula=match({"TelegramID": str(message.from_user.id)}))
+            # TelegramID в Airtable - Number, передаем как число
+            records = table.all(formula=match({"TelegramID": message.from_user.id}))
             if records:
                 record_id = records[0]["id"]
                 table.update(record_id, {"Notified": True})
@@ -274,13 +283,18 @@ async def process_name(message: Message, state: FSMContext):
     lang = (await state.get_data()).get("lang", "ru")
     log_step(user_id, "waiting_for_name", message.text)
 
-    name = validate_text_input(message.text)
-    if name:
+    name = sanitize_text(message.text, max_len=100)
+    if name and len(name) >= 2:
         await state.update_data(name=name)
         await message.answer("Телефон / WhatsApp:" if lang == "ru" else "Phone / WhatsApp:")
         await state.set_state(FormStates.waiting_for_phone)
     else:
-        await message.answer("Введите корректное имя." if lang == "ru" else "Enter valid name.")
+        error_msg = (
+            "❌ Введите корректное имя (минимум 2 символа)."
+            if lang == "ru"
+            else "❌ Enter a valid name (minimum 2 characters)."
+        )
+        await message.answer(error_msg)
 
 
 @router.message(FormStates.waiting_for_phone)
@@ -289,13 +303,19 @@ async def process_phone(message: Message, state: FSMContext):
     lang = (await state.get_data()).get("lang", "ru")
     log_step(user_id, "waiting_for_phone", message.text)
 
-    phone = validate_text_input(message.text)
+    phone = validate_phone(message.text)
     if phone:
         await state.update_data(phone=phone)
         await message.answer("Telegram (@username):")
         await state.set_state(FormStates.waiting_for_telegram)
     else:
-        await message.answer("Введите корректный телефон." if lang == "ru" else "Enter valid phone.")
+        error_msg = (
+            "❌ Введите корректный номер телефона.\n"
+            "Пример: +7 (999) 123-45-67 или +79991234567"
+            if lang == "ru"
+            else "❌ Enter a valid phone number.\nExample: +1 (555) 123-4567"
+        )
+        await message.answer(error_msg)
 
 
 @router.message(FormStates.waiting_for_telegram)
@@ -304,13 +324,19 @@ async def process_telegram(message: Message, state: FSMContext):
     lang = (await state.get_data()).get("lang", "ru")
     log_step(user_id, "waiting_for_telegram", message.text)
 
-    telegram = validate_text_input(message.text)
+    telegram = validate_telegram_username(message.text)
     if telegram:
         await state.update_data(telegram=telegram)
         await message.answer("Ваш город:" if lang == "ru" else "Your city:")
         await state.set_state(FormStates.waiting_for_city)
     else:
-        await message.answer("Введите корректный Telegram." if lang == "ru" else "Enter valid Telegram.")
+        error_msg = (
+            "❌ Введите корректный Telegram username.\n"
+            "Пример: @username или username (5-32 символа, только буквы, цифры и _)"
+            if lang == "ru"
+            else "❌ Enter a valid Telegram username.\nExample: @username or username (5-32 chars, letters, numbers, _)"
+        )
+        await message.answer(error_msg)
 
 
 @router.message(FormStates.waiting_for_city)
@@ -339,7 +365,12 @@ async def process_social(message: Message, state: FSMContext):
     lang = (await state.get_data()).get("lang", "ru")
     log_step(user_id, "waiting_for_social", message.text)
 
-    social = validate_text_input(message.text)
+    # Принимаем как текст или URL, валидируем если это URL
+    social_text = message.text.strip()
+    # Пытаемся валидировать как URL, если не получается - принимаем как текст
+    validated_url = validate_url(social_text)
+    social = validated_url if validated_url else sanitize_text(social_text, max_len=500)
+    
     if social:
         await state.update_data(social=social)
         text = (
@@ -592,8 +623,8 @@ async def process_audience_description(message: Message, state: FSMContext):
     lang = (await state.get_data()).get("lang", "ru")
     log_step(user_id, "waiting_for_audience", message.text)
 
-    audience = validate_text_input(message.text)
-    if audience:
+    audience = sanitize_text(message.text, max_len=500)
+    if audience and len(audience) >= 10:
         await state.update_data(audience=audience)
         text = (
             "Как вы себя позиционируете? В чем ваша уникальность? (1–3 предложения):"
@@ -603,7 +634,12 @@ async def process_audience_description(message: Message, state: FSMContext):
         await message.answer(text)
         await state.set_state(FormStates.waiting_for_positioning)
     else:
-        await message.answer("Введите описание аудитории." if lang == "ru" else "Enter audience description.")
+        error_msg = (
+            "❌ Введите описание аудитории (минимум 10 символов)."
+            if lang == "ru"
+            else "❌ Enter audience description (minimum 10 characters)."
+        )
+        await message.answer(error_msg)
 
 
 @router.message(FormStates.waiting_for_positioning)
@@ -612,8 +648,8 @@ async def process_positioning(message: Message, state: FSMContext):
     lang = (await state.get_data()).get("lang", "ru")
     log_step(user_id, "waiting_for_positioning", message.text)
 
-    positioning = validate_text_input(message.text)
-    if positioning:
+    positioning = sanitize_text(message.text, max_len=500)
+    if positioning and len(positioning) >= 10:
         await state.update_data(positioning=positioning)
         text = (
             "📸 Отправьте фото профиля (или нажмите 'Пропустить' для резервного изображения):"
@@ -623,7 +659,12 @@ async def process_positioning(message: Message, state: FSMContext):
         await message.answer(text, reply_markup=get_photo_keyboard(lang))
         await state.set_state(FormStates.waiting_for_photo)
     else:
-        await message.answer("Введите корректное описание уникальности." if lang == "ru" else "Enter valid uniqueness.")
+        error_msg = (
+            "❌ Введите описание уникальности (минимум 10 символов)."
+            if lang == "ru"
+            else "❌ Enter uniqueness description (minimum 10 characters)."
+        )
+        await message.answer(error_msg)
 
 
 # ==========================
